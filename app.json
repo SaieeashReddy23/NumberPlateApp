@@ -27,6 +27,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "The app accesses your Camera to take picture of vehicles",
+          "photosPermission": "The app accesses your photoLibrary to get vehicle pictures"
+        }
+      ]
+    ],
+    "description": "React app for take pictures of vehicles and send data to backend"
   }
 }
