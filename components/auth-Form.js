@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState} from "react";
 import { View,Text,StyleSheet,Alert } from "react-native";
 import Button from "./button";
 import Input from "./input";
@@ -12,7 +12,11 @@ import { AuthContext } from "../store/auth-context";
 
 
 import { initializeApp } from "firebase/app";
-import { useContext } from "react";
+import { useContext,useEffect } from "react";
+
+import * as Application from 'expo-application';
+
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyDffJyYbPY5nDh_D2gKw5RPDgVp2iUiNCQ",
@@ -32,6 +36,8 @@ const AuthForm = () => {
     const [email,setEmail] = useState('');
     const [password,setPassword] = useState('');
 
+    const [unregister,setUnRegister] = useState(false);
+
     const [isLogin,setIsLogin] = useState(false);
 
     const navigation = useNavigation();
@@ -40,6 +46,81 @@ const AuthForm = () => {
 
 
     const app = initializeApp(firebaseConfig);
+
+
+    const uploadId = async () => {
+
+        try{
+            let response = await fetch('http://192.168.29.31:9090/upload/id', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    deviceId : Application.androidId +"",
+                })
+            });
+
+            let json = await response.json();
+            console.log(json)
+            console.log("successfully uploaded id");
+        }catch(E){
+            console.log("error while uploading text");
+        }
+    }
+
+
+
+    const deleteId = async () => {
+        try{
+            let response = await fetch('http://192.168.29.31:9090/delete/id', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    deviceId : Application.androidId +"",
+                })
+            });
+
+            let json = await response.json();
+            console.log(json)
+            console.log("successfully deleted id");
+        }catch(E){
+            console.log("error while deleting id");
+        }
+    }
+
+    const checkAlreadyRegistered = async () => {
+
+        if(authcxt.token !== ""){
+            return;
+        }
+
+        try{
+            let response = await fetch('http://192.168.29.31:9090/check/id', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    deviceId : Application.androidId +"",
+                })
+            });
+
+            let json = await response.json();
+            console.log(json);
+            if(json.registered){
+                authcxt.register("registered");
+                setIsLogin(false);
+            }
+        }catch(E){
+            console.log("error while checking id");
+        }
+    }
 
 
     const handleLogin = () => {
@@ -53,7 +134,10 @@ const AuthForm = () => {
         // }catch(e){
         //     Alert.alert("Email or Password is incorrect");
         // }
-       
+        
+            console.log("handle login is pressed");
+
+            console.log(Application.androidId);
        
             const auth = getAuth();
 
@@ -62,22 +146,55 @@ const AuthForm = () => {
               // Signed in 
               const user = userCredential.user;
             //   navigation.navigate("RegisterDevice");
-                authcxt.authenticate("registered");
-              setIsLogin(false);
+                if(authcxt.token !== ""){
+                    setUnRegister(true);
+                    authcxt.deRegister();
+                    setIsLogin(false);
+                    setEmail("");
+                    setPassword("");
+                    deleteId();
+                }else{
+                    uploadId();
+                    authcxt.register("registered");
+                    setIsLogin(false);
+                }
+                
+           
               // ...
             })
             .catch((error) => {
-            //   Alert.alert("Email or Password is incorrect");
               setIsLogin(true);
-              setEmail("");
-              setPassword("");
             });
             
 
     }
 
+
+    useEffect(() => {
+       checkAlreadyRegistered();
+    },[])
+
+
+
+    useEffect(() => {
+        setTimeout(() => {
+            setUnRegister(false);
+        },5000)
+
+    },[unregister])
+
     return <View style={styles.container}>
-               <View style={styles.userContainer}>
+
+            {
+                unregister && 
+                <View style={styles.unregisterSuccessful}>
+                    <Text style={styles.unregisterSuccessfulText}>Your device is unregistered </Text>
+                </View>
+
+            }
+          
+
+            <View style={styles.userContainer}>
                 <FontAwesome5 name="user-circle" size={100} color="#FBFCFC" style={styles.userIcon} />
             </View>
             <Text style={styles.title}> Login </Text>
@@ -115,6 +232,22 @@ const styles = StyleSheet.create({
         // shadowRadius: 4,
         // backgroundColor:'white',
 
+    },
+    unregisterSuccessful:{
+
+        backgroundColor:'green',
+        borderWidth:2,
+        borderColor:'white',
+        borderRadius:10,
+        marginBottom:10,
+
+    },
+    unregisterSuccessfulText:{
+        paddingHorizontal:20,
+        paddingVertical:10,
+        fontSize:15,
+        color:'#FBFCFC',
+       
     },
     title :{
         color:'#FBFCFC',

@@ -10,16 +10,29 @@ export const AuthContext = createContext({
 
 const AuthContextProvider = ({children}) => {
 
-    const [authToken,setAuthToken] = useState("Hello");
+    const [authToken,setAuthToken] = useState("");
+    const [isAuthenticated,setIsAuthenticated] = useState(false);
 
-    const authenticate = (token) => {
+    const register = (token) => {
         setAuthToken(token);
+        setIsAuthenticated(true);
+    }
+
+    const openLogin = () => {
+        setIsAuthenticated(false);
+    }
+
+    const deRegister = () => {
+        setAuthToken(""),
+        setIsAuthenticated(false);
     }
 
     const value = {
         token : authToken,
-        isAuthenticated : !!authToken,
-        authenticate : authenticate,
+        isAuthenticated : isAuthenticated,
+        register : register,
+        deRegister:deRegister,
+        openLogin:openLogin,
     }
 
     return <AuthContext.Provider  value={value}  >{children}</AuthContext.Provider>

@@ -1,16 +1,24 @@
 
 import { useState } from "react";
 
-import { View,Text,StyleSheet,Image,Pressable } from "react-native";
+import { View,Text,StyleSheet,Image,Pressable,FlatList,ScrollView } from "react-native";
 
-import Button from "./button";
 
 import { launchCameraAsync,launchImageLibraryAsync } from "expo-image-picker";
 import axios from "axios";
+
 import { SimpleLineIcons } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+import {launchCamera, launchImageLibrary}from 'react-native-image-picker';
+
+import { RNS3 } from "react-native-aws3";
+
+import FormData from "form-data";
+
+
 
 import AWS from "aws-sdk";
 
@@ -18,9 +26,10 @@ import AWS from "aws-sdk";
 
 const BASE_URL = 'https://react-native-7530c-default-rtdb.asia-southeast1.firebasedatabase.app/';
 
-const keyId = 'AKIAYTRWT6LJCDCOOV4O';
-const securityKey = 'BopV1UbH42UJPfKpmKNSKSl6BqkfqesozIsmRDD6';
-const bucketName = "sai-reactapp-2022";
+const keyId = 'AKIAYTRWT6LJBH7ZM4MR';
+const securityKey = 'ARKYQHKWaHyuVax8lEni6Rl5t4Ccjs09NLlobn8K';
+const bucketName = "saieeash-aws-bucket";
+const region = "ap-south-1";
 
 
 
@@ -35,9 +44,23 @@ const bucketName = "sai-reactapp-2022";
 //     region: 'ap-south-1',
 // })
 
-const ImagePicker = () => {
+const ImagePickerComponent = () => {
 
     const [pickedImage,setPickedImage] = useState();
+
+    
+    const [uploadSuccessMessage,setUploadSuccessMessage] = useState("");
+
+    const [detectedText,setDetectedText] = useState([]);
+
+    const [isDetected,setIsDetected] = useState(false);
+
+    const [filePath, setFilePath] = useState({});
+ 
+   
+
+
+   
 
     const imageHandler = async () => {
         const image = await  launchCameraAsync({
@@ -46,7 +69,14 @@ const ImagePicker = () => {
             quality: 0.5,
           });
 
+
         console.log(image);
+
+        if(isDetected){
+            setIsDetected(false);
+            setDetectedText(false);
+        }
+        
 
         setPickedImage(image);
     }
@@ -62,13 +92,26 @@ const ImagePicker = () => {
                 maxWidth:200,
                 selectedLimit: 1 ,
                 mediaType:'photo',
-                includeBase64:false
-            }
-
+                includeBase64:false,
+            },
+            
         }
+
+        // const option = {
+        //     storageOptions:{
+        //         path: 'images',
+        //         mediaType: 'photo',
+        //     },
+        //     includeBase64: true,
+        // };
 
         const image = await launchImageLibraryAsync(options);
         console.log(image);
+
+        if(isDetected){
+            setIsDetected(false);
+            setDetectedText(false);
+        }
 
         setPickedImage(image);
 
@@ -76,113 +119,39 @@ const ImagePicker = () => {
 
     const handleUpload = async () => {
 
-       
-
-
-
-        const data = new FormData();
-    
-
-
-        // const params = {
-        //     Body: 'scene.jpg' ,
-        //     Bucket: bucketName,
-        //     Key: 'image2.jpg',
-        // };
-
-        // console.log("after appending to the form data");
-        data.append('photo',
-                        {
-                            type:pickedImage.type,
-                            uri:pickedImage.uri,
-                        });
-
-        // console.log(data);
-
         try{
-          let res = await   axios.post(BASE_URL+'/images.json',
-                                    {image:data._parts[0]},
-                                    // {
-                                    //     headers:{
-                                    //         'Content-Type':'multipart/form-data', 
-                                    //     }
-                                    // }
-                                    );
 
-
-            // fetch('scene.jpg')
-            //     .then((data) => console.log(data));
-                        
             
+            // const response = await axios.get("http://192.168.29.31:9090/check");
+            // console.log(response.data);
 
-            // myBucket.putObject(params)
-            // .on('httpUploadProgress', (evt) => {
-            //     setProgress(Math.round((evt.loaded / evt.total) * 100))
-            // })
-            // .send((err) => {
-            //     if (err) console.log(err)
-            // })
-                    
+            const form = new FormData();
 
 
 
-            // let res = await fetch(
-            //     BASE_URL + '/images.json',
-            //     {
-            //         method:'post',
-            //         body:data,
-            //         headers:{
-            //             'Content-Type':'multipart/form-data',
-            //         },
-            //     }
-            // )
+            form.append('file', {
+                name:"image.jpg", // Whatever your filename is
+                uri: pickedImage.uri, //  file:///data/user/0/com.cookingrn/cache/rn_image_picker_lib_temp_5f6898ee-a8d4-48c9-b265-142efb11ec3f.jpg
+                type: 'image/jpg', // video/mp4 for videos..or image/png etc...
+              });
 
+            let response = await fetch('http://192.168.29.31:9090/upload/file',{
+                    method: 'post',
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        },
+                    body: form
+                })
 
+            let json = await response.json();
 
-            // const s3 = new AWS.S3({
-            //     accessKeyId:keyId,
-            //     secretAccessKey: securityKey,
-            //   })
-    
-    
-            //     const filename = 'scene';
+            setDetectedText(json);
 
-            //     const file = new File('scene');
-
-            //     const read = new  FileReader();
-
-            //     read.readAsDataURL(file)
-            
-
-            //     const fileContent = readFileSync(filename);
-    
-        
-    
-            //     const params = {
-            //         Bucket: bucketName,
-            //         Key: `${filename}.jpg`,
-            //         Body: fileContent
-            //         }
-    
-            //     s3.upload(params, (err, data) => {
-            //     if (err) {
-            //         reject(err)
-            //     }
-            //     resolve(data.Location)
-            //     })
-
-            fetch('testfile.txt')
-                .then(response => response.text())
-                .then(data => {
-                    // Do something with your data
-                    console.log(data);
-                }).catch((e) => {
-                    console.log("could not fetch the file");
-                });
-
-     
+            console.log(json);
 
             setPickedImage();
+
+            setIsDetected(true);
 
             console.log("successfully submitted the data");
         }catch(e){
@@ -196,23 +165,75 @@ const ImagePicker = () => {
     const handleRemove = () => {
         // console.log("handle Rmove pressed");
         setPickedImage()
+        if(isDetected){
+            setIsDetected(false);
+            setDetectedText([]);
+        }
     }
+
+    const handleText = async (text) => {
+
+        try{
+            let response = await fetch('http://192.168.29.31:9090/upload/text', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: text+"",
+                })
+            });
+
+            let json = await response.json();
+            console.log(json)
+            console.log("successfully uploaded text");
+        }catch(E){
+            console.log("error while uploading text");
+        }
+
+        setIsDetected(false);
+        setDetectedText([]);
+        setPickedImage();
+        
+    }
+
+    // "detectedText": "ANGE ROVER",
+    //     "type": "LINE",
+    //     "id": 0,
+    //     "parentId": null,
+    //     "confidence": 65.81267,
+    const textRender = ({item}) => {
+
+        console.log(item);
+
+
+        return  <Pressable onPress={() => handleText(item.detectedText)}>
+                    <View style={styles.textContainer}>
+                        <Text style={styles.textComponent}>{item.detectedText}</Text>
+                    </View>
+                </Pressable>
+            
+    }
+
+    let detected =  <FlatList data={detectedText} keyExtractor = {item => item.id}  renderItem={textRender} />
+                   
 
     let imagePreview = <Text style={styles.imageText}>No image taken yet</Text>
 
     if(pickedImage){
-        imagePreview = <Image style={styles.image} source={{uri:pickedImage.uri}}/>
+        imagePreview = <Image style={styles.image} source={{uri: pickedImage.uri}}/>
     }
 
+    // if(isDetected){
+    //     return detected;
+    // }
+    
+
+
 return  <View style={styles.container}>
-
-            {/* <View  style={styles.buttons} >
-                <Button style={styles.buttonsSpace} text="Open Camera" onPress={imageHandler} />
-                <Button  style={styles.buttonsSpace} text="Open Gallery" onPress={galleryHandler}/>
-            </View> */}
-
             <View style={styles.buttonIcons}>
-                <Pressable android_ripple={{color:'#72B5F7'}} onPress={imageHandler}>
+                <Pressable  android_ripple={{color:'#72B5F7'}} onPress={imageHandler}>
                     <View style={[styles.icons,{borderRightWidth:2,borderColor:'white'}]}>
                             <SimpleLineIcons name="camera" size={30} color="#FBFCFC" />
                     </View>
@@ -226,45 +247,45 @@ return  <View style={styles.container}>
             </View>
 
             <View style={styles.imagePreview}>
-        
-                    {imagePreview}
-             
-               
-                {/* <View>
-                    <MaterialIcons name="highlight-remove" size={50} color="black" />
-                </View> */}
+                    {isDetected ? detected : imagePreview}
             </View>
 
-                { pickedImage &&
-                    <View style={styles.removeContainer}>
-                    <Pressable onPress={handleRemove} android_ripple={{color:'#72B5F7'}}>
-                        <View style={styles.remove}>
-                            <FontAwesome name="remove" size={40} color="#EFC2BB" />
-                        </View>
-                    </Pressable>
-                </View>
-            
+            { pickedImage &&
+                <View style={styles.removeContainer}>
+                <Pressable onPress={handleRemove} android_ripple={{color:'#72B5F7'}}>
+                    <View style={styles.remove}>
+                        <FontAwesome name="remove" size={40} color="#EFC2BB" />
+                    </View>
+                </Pressable>
+            </View>
+        
+            }
 
-                }
+            { isDetected &&
+                <View style={styles.removeContainer}>
+                <Pressable onPress={handleRemove} android_ripple={{color:'#72B5F7'}}>
+                    <View style={styles.remove}>
+                        <FontAwesome name="remove" size={40} color="#EFC2BB" />
+                    </View>
+                </Pressable>
+            </View>
+        
+            }
                 
           
            
             <View style={[styles.buttonIcons,{marginVertical:20}]}>
                 <Pressable onPress={handleUpload}>
                     <View style={styles.icons}>
-                        <FontAwesome name="send" size={30} color="#FBFCFC" />
+                        {/* <FontAwesome name="send" size={30} color="#FBFCFC" /> */}
+                        <MaterialCommunityIcons name="upload" size={30} color="#FBFCFC" />
                     </View>
                 </Pressable>
             </View>
-{/*            
-            <View style={styles.submitButton}>
-                <Button text="Upload" onPress={handleUpload}/>
-            </View> */}
-
         </View>
 }
 
-export default ImagePicker;
+export default ImagePickerComponent;
 
 const styles = StyleSheet.create({
     container:{
@@ -277,9 +298,10 @@ const styles = StyleSheet.create({
         height:500,
         justifyContent:'center',
         alignItems:'center',
-        backgroundColor:'#F3F5F7',
+        backgroundColor:'#E0E0E0',
         borderRadius:40,
         color:'black',
+        overflow:'scroll',
 
     },
     imageText:{
@@ -305,6 +327,7 @@ const styles = StyleSheet.create({
   
     image:{
         width:'100%',
+        // minHeight:300,
         height:'100%',
         borderRadius:40,
     },
@@ -348,5 +371,30 @@ const styles = StyleSheet.create({
         alignItems:'center',
         marginTop:100,
     },
+
+    scrollView:{
+        width:'100%',
+        height:'100%'
+    },
+    textContainer:{
+        flexDirection:'row', 
+        backgroundColor:'#2196F3',
+        justifyContent:'center',  
+        marginHorizontal:30,
+        marginVertical:20,
+        borderRadius:15,
+        paddingVertical:10,
+        paddingHorizontal:10,
+    },
+    textInnerContainer:{
+        marginHorizontal:10,
+        marginVertical:10,
+        paddingHorizontal:10,
+        paddingVertical:10,
+    },
+    textComponent:{
+        color:'white',
+        fontSize:15,
+    }
 
 })
