@@ -197,7 +197,7 @@ const AuthForm = () => {
             <View style={styles.userContainer}>
                 <FontAwesome5 name="user-circle" size={100} color="#FBFCFC" style={styles.userIcon} />
             </View>
-            <Text style={styles.title}> Login </Text>
+            {authcxt.token !== ""  ?<Text style={styles.title}> UnRegister </Text>: <Text style={styles.title}> Login </Text> }
 
             { isLogin && <Text style={styles.error}>* Incorrect email or password</Text>}
 

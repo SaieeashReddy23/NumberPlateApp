@@ -1,8 +1,9 @@
 
-import { useState } from "react";
+import { useState,useEffect } from "react";
 
-import { View,Text,StyleSheet,Image,Pressable,FlatList,ScrollView } from "react-native";
+import { View,Text,StyleSheet,Image,Pressable,FlatList,ScrollView,Alert } from "react-native";
 
+import { getCurrentPositionAsync,useForegroundPermissions,PermissionStatus }from 'expo-location';
 
 import { launchCameraAsync,launchImageLibraryAsync } from "expo-image-picker";
 import axios from "axios";
@@ -48,7 +49,6 @@ const ImagePickerComponent = () => {
 
     const [pickedImage,setPickedImage] = useState();
 
-    
     const [uploadSuccessMessage,setUploadSuccessMessage] = useState("");
 
     const [detectedText,setDetectedText] = useState([]);
@@ -56,9 +56,12 @@ const ImagePickerComponent = () => {
     const [isDetected,setIsDetected] = useState(false);
 
     const [filePath, setFilePath] = useState({});
+
+    const [locationPermissionInformation,requirePermission] = useForegroundPermissions();
  
    
 
+  
 
    
 
@@ -147,7 +150,6 @@ const ImagePickerComponent = () => {
 
             setDetectedText(json);
 
-            console.log(json);
 
             setPickedImage();
 
@@ -172,6 +174,7 @@ const ImagePickerComponent = () => {
     }
 
     const handleText = async (text) => {
+        const location = await handleLocation();
 
         try{
             let response = await fetch('http://192.168.29.31:9090/upload/text', {
@@ -182,11 +185,13 @@ const ImagePickerComponent = () => {
                 },
                 body: JSON.stringify({
                     text: text+"",
+                    latitude:location.coords.latitude,
+                    longitude:location.coords.longitude,
+                    timestamp:location.timestamp
                 })
             });
 
-            let json = await response.json();
-            console.log(json)
+            
             console.log("successfully uploaded text");
         }catch(E){
             console.log("error while uploading text");
@@ -198,11 +203,41 @@ const ImagePickerComponent = () => {
         
     }
 
-    // "detectedText": "ANGE ROVER",
-    //     "type": "LINE",
-    //     "id": 0,
-    //     "parentId": null,
-    //     "confidence": 65.81267,
+    const VerifyLocationPermission = async () => {
+
+        if(locationPermissionInformation.status == PermissionStatus.UNDETERMINED){
+            const permissionResponse = await requirePermission();
+            return permissionResponse.granted;
+        }
+
+        if(locationPermissionInformation.status == PermissionStatus.DENIED){
+            Alert.alert("Insufficent permissions!",
+                        "You may need to grant permissions to use this app");
+            return false;
+        }
+
+        return true;
+    }
+
+
+    const handleLocation = async () => {
+
+        const hasPermissions = await VerifyLocationPermission();
+
+        if(!hasPermissions){
+            return;
+        }
+
+
+        const location = await getCurrentPositionAsync();
+        return location;
+    }
+
+
+    useEffect(() => {
+        VerifyLocationPermission();
+    },[])
+
     const textRender = ({item}) => {
 
         console.log(item);
@@ -228,6 +263,7 @@ const ImagePickerComponent = () => {
     // if(isDetected){
     //     return detected;
     // }
+
     
 
 
